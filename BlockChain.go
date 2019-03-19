@@ -20,7 +20,7 @@ func NewBlockChain() *BlockChain {
 
 //定义创世块
 func GenesisBlock() *Block {
-	block := NewBlock("创世块", []byte{})
+	block := NewBlock("Genesis Block", []byte{})
 	return block
 }
 

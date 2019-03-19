@@ -45,6 +45,7 @@ func NewBlock(data string, preHash []byte) *Block {
 func (block *Block) SetHash() {
 	//存储拼接好的数据，最后作为sha256函数的参数
 	var blockInfo []byte
+	/*
 	blockInfo = append(blockInfo, block.PreHash...)
 	blockInfo = append(blockInfo, block.Data...)
 	blockInfo = append(blockInfo, block.MerKleRoot...)
@@ -52,6 +53,17 @@ func (block *Block) SetHash() {
 	blockInfo = append(blockInfo, uint64ToByte(block.TimeStamp)...)
 	blockInfo = append(blockInfo, uint64ToByte(block.Difficulty)...)
 	blockInfo = append(blockInfo, uint64ToByte(block.Nonce)...)
+	*/
+	tmp := [][]byte{
+		block.PreHash,
+		block.Data,
+		block.MerKleRoot,
+		uint64ToByte(block.Version),
+		uint64ToByte(block.TimeStamp),
+		uint64ToByte(block.Difficulty),
+		uint64ToByte(block.Nonce),
+	}
+	blockInfo = bytes.Join(tmp, []byte(""))
 
 	hash := sha256.Sum256(blockInfo) //生成hash
 	block.Hash = hash[:]
