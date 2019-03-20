@@ -31,7 +31,7 @@ func NewBlock(data string, preHash []byte) *Block {
 		PreHash:    preHash,
 		MerKleRoot: []byte{}, //先填空，后面再计算
 		TimeStamp:  uint64(time.Now().Unix()),
-		Difficulty: 4, //前面4个零(00001)
+		Difficulty: 20, //前面4个零(00001)
 		//Nonce:      100,
 		//Hash:       []byte{}, //先填空，后面再计算
 		Data: []byte(data),
