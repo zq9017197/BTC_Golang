@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
 	"time"
 	"bytes"
 	"encoding/binary"
@@ -32,20 +31,27 @@ func NewBlock(data string, preHash []byte) *Block {
 		PreHash:    preHash,
 		MerKleRoot: []byte{}, //先填空，后面再计算
 		TimeStamp:  uint64(time.Now().Unix()),
-		Difficulty: 100,
-		Nonce:      100,
-		Hash:       []byte{}, //先填空，后面再计算
-		Data:       []byte(data),
+		Difficulty: 4, //前面4个零(00001)
+		//Nonce:      100,
+		//Hash:       []byte{}, //先填空，后面再计算
+		Data: []byte(data),
 	}
-	block.SetHash() //生成哈希值
+
+	//block.SetHash() //生成哈希值(v1)
+	pow := NewProofOfWork(&block)
+	hash, nonce := pow.Run() //POW 挖矿,计算符合hash的随机数
+	block.Hash = hash
+	block.Nonce = nonce
+
 	return &block
 }
 
+/*
 //生成哈希值
 func (block *Block) SetHash() {
 	//存储拼接好的数据，最后作为sha256函数的参数
 	var blockInfo []byte
-	/*
+	*//*
 	blockInfo = append(blockInfo, block.PreHash...)
 	blockInfo = append(blockInfo, block.Data...)
 	blockInfo = append(blockInfo, block.MerKleRoot...)
@@ -53,7 +59,7 @@ func (block *Block) SetHash() {
 	blockInfo = append(blockInfo, uint64ToByte(block.TimeStamp)...)
 	blockInfo = append(blockInfo, uint64ToByte(block.Difficulty)...)
 	blockInfo = append(blockInfo, uint64ToByte(block.Nonce)...)
-	*/
+	*//*
 	tmp := [][]byte{
 		block.PreHash,
 		block.Data,
@@ -68,6 +74,7 @@ func (block *Block) SetHash() {
 	hash := sha256.Sum256(blockInfo) //生成hash
 	block.Hash = hash[:]
 }
+*/
 
 //将uint64转成[]byte
 func uint64ToByte(num uint64) []byte {
