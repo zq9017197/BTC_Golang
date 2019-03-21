@@ -11,10 +11,11 @@ func main() {
 	bc.AddBlock("Hello BTC")
 	bc.AddBlock("Hello ETH")
 	bc.AddBlock("Hello LTC")
+	defer bc.db.Close()
 
 	/*
 	for idx, block := range bc.blocks {
-		fmt.Println(" ============== current block index :", idx)
+		fmt.Println("============== current block index :", idx)
 		fmt.Printf("Version : %d\n", block.Version)
 		fmt.Printf("PrevBlockHash : %x\n", block.PreHash)
 		fmt.Printf("Hash : %x\n", block.Hash)
@@ -36,7 +37,7 @@ func main() {
 		cursor := bucket.Cursor() //遍历 key
 		for hash, data := cursor.First(); hash != nil; hash, data = cursor.Next() {
 			block := Deserialize(data) //反序列化
-			fmt.Println(" ============== current block hash :", hash)
+			fmt.Println("============================")
 			fmt.Printf("Version : %d\n", block.Version)
 			fmt.Printf("PrevBlockHash : %x\n", block.PreHash)
 			fmt.Printf("Hash : %x\n", block.Hash)

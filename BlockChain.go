@@ -39,7 +39,7 @@ func NewBlockChain() *BlockChain {
 	if err != nil {
 		log.Panic("bolt.Open err:", err)
 	}
-	defer db.Close()
+	//defer db.Close() //千万不要关闭，后面AddBlock要用db
 	var tail []byte //最后一个区块的哈希
 
 	//获取bucket
@@ -54,7 +54,7 @@ func NewBlockChain() *BlockChain {
 
 			//创建一个创世块，并作为第一个区块添加到区块链中
 			gBlock := GenesisBlock()
-			bucket.Put(gBlock.Hash, gBlock.toByte())     //写创世块
+			bucket.Put(gBlock.Hash, gBlock.Serialize())  //写创世块
 			bucket.Put([]byte(lastHashKey), gBlock.Hash) //写最后一个区块的哈希
 			tail = gBlock.Hash
 		} else {
@@ -88,7 +88,7 @@ func (bc *BlockChain) AddBlock(data string) {
 		if bucket == nil {
 			log.Panic("bucket should not be nil !")
 		} else {
-			bucket.Put(block.Hash, block.toByte())      //写创世块
+			bucket.Put(block.Hash, block.Serialize())   //写创世块
 			bucket.Put([]byte(lastHashKey), block.Hash) //写最后一个区块的哈希
 			bc.tail = block.Hash
 		}
