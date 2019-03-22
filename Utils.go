@@ -23,7 +23,7 @@ func uint64ToByte(num uint64) []byte {
 
 //反序列化
 //gob是Golang包自带的一个数据结构序列化的编码/解码工具。编码使用Encoder，解码使用Decoder。
-func Deserialize(data []byte) Block {
+func Deserialize(data []byte) *Block {
 	var block Block
 	var buffer bytes.Buffer
 
@@ -38,5 +38,5 @@ func Deserialize(data []byte) Block {
 		log.Panic("decoder.Decode err:", err)
 	}
 
-	return block
+	return &block
 }

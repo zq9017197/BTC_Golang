@@ -60,7 +60,7 @@ func (pow *ProofOfWork) Run() (hash []byte, nonce uint64) {
 		bigIntTmp.SetBytes(hash) //转换为big.Int
 
 		if bigIntTmp.Cmp(pow.target) == -1 {
-			fmt.Printf("found hash : %x, %d\n", hash, nonce)
+			fmt.Printf("mining success: %x, %d\n", hash, nonce)
 			break //挖矿成功
 		}
 		nonce++

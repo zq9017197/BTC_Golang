@@ -24,8 +24,8 @@ func NewBlockChainIterator(bc *BlockChain) BlockChainIterator {
 }
 
 //迭代器访问函数
-func (it *BlockChainIterator) GetBlockAndMoveLeft() Block {
-	var block Block
+func (it *BlockChainIterator) GetBlockAndMoveLeft() *Block {
+	var block *Block
 
 	it.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBecket))

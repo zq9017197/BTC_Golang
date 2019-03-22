@@ -52,7 +52,7 @@ func (cli *Client) printChain() {
 	it := NewBlockChainIterator(cli.bc)
 	for {
 		block := it.GetBlockAndMoveLeft()
-		fmt.Printf("===========================\n\n")
+		fmt.Printf("===========================\n")
 		fmt.Printf("Version : %d\n", block.Version)
 		fmt.Printf("PrevBlockHash : %x\n", block.PreHash)
 		fmt.Printf("Hash : %x\n", block.Hash)
@@ -63,7 +63,7 @@ func (cli *Client) printChain() {
 		fmt.Printf("Nonce : %d\n", block.Nonce)
 		fmt.Printf("Data : %s\n", block.Data)
 
-		pow := NewProofOfWork(&block)
+		pow := NewProofOfWork(block)
 		fmt.Printf("IsValid : %v\n", pow.IsValid())
 
 		//终止条件
