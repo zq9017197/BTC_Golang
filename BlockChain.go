@@ -19,11 +19,6 @@ type BlockChain struct {
 	tail []byte //尾巴，存储最后一个区块的哈希
 }
 
-//常量
-const blockChainDb = "blockChain.db" //数据库文件名字
-const blockBecket = "blockBecket"    //bucket名字
-const lastHashKey = "lastHashKey"    //最后一个区块哈希的Key
-
 //创建区块链
 func NewBlockChain() *BlockChain {
 	//创建一个创世块，并作为第一个区块添加到区块链中
