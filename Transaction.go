@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"log"
 	"crypto/sha256"
+	"fmt"
 )
 
 /**
@@ -20,7 +21,7 @@ type Transaction struct {
 
 //交易输入结构
 type TXInput struct {
-	PreTXID      []byte //引用utxo所在交易的ID
+	PreTXID   []byte //引用utxo所在交易的ID
 	VoutIndex int64  //所消费utxo在output中的索引
 	ScriptSig string //解锁脚本（签名，公钥）
 }
@@ -45,4 +46,21 @@ func (tx *Transaction) SetHash() {
 	data := buffer.Bytes()
 	hash := sha256.Sum256(data)
 	tx.TXID = hash[:]
+}
+
+//创建挖矿交易
+func NewCoinbaseTX(address string, data string) *Transaction {
+	//address 是矿⼯地址，data是矿⼯自定义的附加信息
+	if data == "" {
+		data = fmt.Sprintf("reward %s %f\n", address, reward)
+	}
+
+	//比特币系统，对于这个input的id填0，对索引填0xffff，data由矿⼯填写，一般填所在矿池的名字
+	input := TXInput{nil, -1, data}
+	output := TXOutput{reward, address}
+
+	tx := Transaction{nil, []TXInput{input}, []TXOutput{output}}
+	tx.SetHash()
+
+	return &tx
 }

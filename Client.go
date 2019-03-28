@@ -32,7 +32,7 @@ func (cli *Client) Run() {
 				fmt.Println("data should not be empty!")
 				os.Exit(1)
 			}
-			cli.addBlock(data)
+			cli.addBlock(nil) //TODO
 		}
 	case "printChain":
 		cli.printChain()
@@ -43,8 +43,8 @@ func (cli *Client) Run() {
 }
 
 //添加区块（挖矿）
-func (cli *Client) addBlock(data string) {
-	cli.bc.AddBlock(data)
+func (cli *Client) addBlock(txs []*Transaction) {
+	cli.bc.AddBlock(txs)
 }
 
 //打印区块链
@@ -61,7 +61,7 @@ func (cli *Client) printChain() {
 		fmt.Printf("TimeStamp : %s\n", timeFormat)
 		fmt.Printf("Difficuty : %d\n", block.Difficulty)
 		fmt.Printf("Nonce : %d\n", block.Nonce)
-		fmt.Printf("Data : %s\n", block.Data)
+		fmt.Printf("Data : %s\n", block.Transactions[0].TXInputs[0].ScriptSig)
 
 		pow := NewProofOfWork(block)
 		fmt.Printf("IsValid : %v\n", pow.IsValid())

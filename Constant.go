@@ -15,3 +15,6 @@ const Usage = `
 	addBlock --data DATA "add a block"
 	printChain "print block Chain"
 `
+
+//挖矿奖励
+const reward = 12.5

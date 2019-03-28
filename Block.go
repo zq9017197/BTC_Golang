@@ -21,21 +21,25 @@ type Block struct {
 	Nonce      uint64  //随机数，这就是挖矿时所要寻找的数
 	//正常比特币中没有当前区块的哈希值
 	Hash [] byte //当前区块哈希值(为了方便实现，所以将区块的哈希值放到了区块中)
-	Data [] byte //区块数据
+	//Data [] byte //区块数据
+	Transactions []*Transaction //区块数据，真实交易数组
 }
 
 //创建区块
-func NewBlock(data string, preHash []byte) *Block {
+func NewBlock(txs []*Transaction, preHash []byte) *Block {
 	block := Block{
-		Version:    00,
-		PreHash:    preHash,
-		MerKleRoot: []byte{}, //先填空，后面再计算
+		Version: 00,
+		PreHash: preHash,
+		//MerKleRoot: []byte{}, //先填空，后面再计算
 		TimeStamp:  uint64(time.Now().Unix()),
 		Difficulty: 20, //前面4个零(00001)
 		//Nonce:      100,
 		//Hash:       []byte{}, //先填空，后面再计算
-		Data: []byte(data),
+		//Data: []byte(data),
+		Transactions: txs,
 	}
+
+	block.MerKleRoot = block.MakeMerkelRoot() //设置梅克尔根
 
 	//block.SetHash() //生成哈希值(v1)
 	pow := NewProofOfWork(&block)
@@ -87,4 +91,11 @@ func (block *Block) Serialize() []byte {
 	}
 
 	return buffer.Bytes()
+}
+
+//模拟梅克尔根
+func (block *Block) MakeMerkelRoot() []byte {
+	//这里就不把所有交易数据两两哈希了，直接把所有 TXID连接起来
+	//TODO
+	return []byte{}
 }

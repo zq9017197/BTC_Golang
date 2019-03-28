@@ -74,7 +74,9 @@ func (pow *ProofOfWork) prepareData(nonce uint64) []byte {
 	block := pow.block
 	tmp := [][]byte{
 		block.PreHash,
-		block.Data,
+		//block.Data,
+		//区块交易数据两两哈希，最终会得到一个哈希值，就是梅克尔根
+		//区块数据哈希其实是不包含交易数据的，只有区块头哈希，交易数据影响梅克尔根。梅克尔根在交易头里面，就影响区块的哈希值
 		block.MerKleRoot,
 		uint64ToByte(block.Version),
 		uint64ToByte(block.TimeStamp),
