@@ -50,6 +50,7 @@ func (tx *Transaction) SetHash() {
 
 //创建挖矿交易
 func NewCoinbaseTX(address string, data string) *Transaction {
+	//coinbase总是新区块的第一条交易，这条交易中只有一个输出，即对矿工的奖励，没有输入。
 	//address 是矿⼯地址，data是矿⼯自定义的附加信息
 	if data == "" {
 		data = fmt.Sprintf("reward %s %f\n", address, reward)
@@ -63,4 +64,19 @@ func NewCoinbaseTX(address string, data string) *Transaction {
 	tx.SetHash()
 
 	return &tx
+}
+
+//解锁脚本，付款人会使用付款人的解锁脚本解开能够支配的UTXO
+func (input *TXInput) CanUnlockUTXOWith(unlockData string) bool {
+	//解锁脚本是检验input是否可以使用由某个地址锁定的utxo，所以对于解锁脚本来说，是外部提供锁定信息，我去检查一下能否解开它。
+	//我们没有涉及到真实的非对称加密，所以使用字符串来代替加密和签名数据。即使用地址进行加密，同时使用地址当做签名，通过对比字符串来确定utxo能否解开。
+	//ScriptSig是签名，v4版本中使用付款人的地址填充。unlockData是收款人的地址
+	return input.ScriptSig == unlockData
+}
+
+//锁定脚本，使用收款人的地址对付款金额进行锁定
+func (output *TXOutput) CanBeUnlockedWith(unlockData string) bool {
+	//锁定脚本是用于指定比特币的新主人。在创建output时，应该是一直在等待一个签名的到来，检查这个签名能否解开自己锁定的比特币。
+	//ScriptPubKey是锁定信息，v4版本中使用收款人的地址填充。unlockData是付款人的地址（签名）
+	return output.ScriptPubKey == unlockData
 }

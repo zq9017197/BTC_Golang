@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"log"
 	"encoding/gob"
+	"crypto/sha256"
 )
 
 /**
@@ -95,7 +96,14 @@ func (block *Block) Serialize() []byte {
 
 //模拟梅克尔根
 func (block *Block) MakeMerkelRoot() []byte {
-	//这里就不把所有交易数据两两哈希了，直接把所有 TXID连接起来
-	//TODO
-	return []byte{}
+	//在比特币中，其实是对区块头进行哈希运算，而不是对区块整体进行哈希运算。
+	//比特币系统根据交易信息生成Merkel Root哈希值，所以交易可以影响到区块的哈希值。
+	//正常的生成过程是使用所有交易的哈希值生成一个平衡二叉树，为了简化代码，我们目前直接将区块中交易的哈希值进行拼接后进行哈希操作即可。
+	var tmp [][]byte
+	for _, tx := range block.Transactions {
+		tmp = append(tmp, tx.TXID)
+	}
+	data := bytes.Join(tmp, []byte(""))
+	hash := sha256.Sum256(data)
+	return hash[:]
 }

@@ -26,7 +26,7 @@ func (cli *Client) Run() {
 	cmd := list[1]
 	switch cmd {
 	case "addBlock":
-		if len(list) > 3 && list[2] == "--data" {
+		if len(list) == 4 && list[2] == "--data" {
 			data := list[3]
 			if data == "" {
 				fmt.Println("data should not be empty!")
@@ -36,6 +36,15 @@ func (cli *Client) Run() {
 		}
 	case "printChain":
 		cli.printChain()
+	case "getBalance":
+		if len(list) == 4 && list[2] == "--address" {
+			address := list[3]
+			if address == "" {
+				fmt.Println("address should not be empty!")
+				os.Exit(1)
+			}
+			cli.getBalance(address)
+		}
 	default:
 		fmt.Println(Usage)
 	}
@@ -71,4 +80,16 @@ func (cli *Client) printChain() {
 			break
 		}
 	}
+}
+
+//获取余额
+func (cli *Client) getBalance(address string) {
+	utxos := cli.bc.FindUTXOs(address)
+
+	var total float64
+	for _, utxo := range utxos {
+		total += utxo.Value
+	}
+
+	fmt.Printf("The balance of \"%s\" is : %f BTC\n", address, total)
 }

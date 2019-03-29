@@ -66,7 +66,7 @@ func NewBlockChain(address string) *BlockChain {
 
 //定义创世块
 func GenesisBlock(address string) *Block {
-	coinbase := NewCoinbaseTX(address, "Genesis Block")
+	coinbase := NewCoinbaseTX(address, genesisInfo)
 	block := NewBlock([]*Transaction{coinbase}, []byte{})
 	return block
 }
@@ -93,4 +93,46 @@ func (bc *BlockChain) AddBlock(txs []*Transaction) {
 
 		return nil
 	})
+}
+
+//返回指定地址能够支配的utxo的集合
+func (bc *BlockChain) FindUTXOs(address string) []TXOutput {
+	var utxos []TXOutput
+	//保存消费过的output，key是这个output的txid，value是这个交易中索引的数组
+	spentOutputs := make(map[string][]int64)
+
+	//1.遍历区块
+	it := NewBlockChainIterator(bc)
+	for {
+		block := it.GetBlockAndMoveLeft()
+
+		//2.遍历交易
+		for _, tx := range block.Transactions {
+			//3.遍历output，找到和自己相关的utxo（在添加output之前检查一下是否已经消耗过）
+			for _, output := range tx.TXOutputs {
+				if output.ScriptPubKey == address { //找到和自己相关的utxo
+					utxos = append(utxos, output)
+				}
+			}
+
+			//4.遍历input，找到自己花费过的utxo集合（把自己消费国的标识出来）
+			for _, input := range tx.TXInputs {
+				if input.ScriptSig == address {
+					//交易输⼊，可能是多个。多个交易输入可能是同一个TXID，不同的索引
+					idxArr := spentOutputs[string(input.PreTXID)]
+					spentOutputs[string(input.PreTXID)] = append(idxArr, input.VoutIndex)
+				}
+			}
+		}
+
+		//终止条件
+		if len(block.PreHash) == 0 {
+			break
+		}
+	}
+
+	//5.过滤已经消费过的utxo
+	//TODO
+
+	return utxos
 }
