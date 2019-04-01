@@ -78,6 +78,40 @@ func (tx *Transaction) IsCoinbase() bool {
 	return false
 }
 
+//创建普通交易
+func NewTransaction(fromAddr string, toAddr string, amount float64, bc *BlockChain) *Transaction {
+	//1.找到最合理的utxo集合 map[string][]int64
+	utxos, calc := bc.FindNeedUTXOs(fromAddr, amount)
+	if calc < amount {
+		fmt.Println("余额不足，交易失败！")
+		return nil
+	}
+
+	var inputs [] TXInput
+	var outputs [] TXOutput
+
+	//2.将这些utxo逐一转成inputs
+	for txid, idxArr := range utxos {
+		for _, idx := range idxArr {
+			input := TXInput{[]byte(txid), int64(idx), fromAddr}
+			inputs = append(inputs, input)
+		}
+	}
+
+	//3.创建outputs
+	output := TXOutput{amount, toAddr}
+	outputs = append(outputs, output)
+
+	//4.判断是否需要找零
+	if calc > amount {
+		outputs = append(outputs, TXOutput{calc - amount, fromAddr})
+	}
+
+	tx := Transaction{nil, inputs, outputs}
+	tx.SetHash()
+	return &tx
+}
+
 //解锁脚本，付款人会使用付款人的解锁脚本解开能够支配的UTXO
 func (input *TXInput) CanUnlockUTXOWith(unlockData string) bool {
 	//解锁脚本是检验input是否可以使用由某个地址锁定的utxo，所以对于解锁脚本来说，是外部提供锁定信息，我去检查一下能否解开它。

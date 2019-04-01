@@ -111,11 +111,14 @@ func (bc *BlockChain) FindUTXOs(address string) []TXOutput {
 		OUTPUT:
 		//3.遍历output，找到和自己相关的utxo（在添加output之前检查一下是否已经消耗过）
 			for idx, output := range tx.TXOutputs {
-				//过滤掉已经消费过的utxo
+				//5.过滤消费过的utxo
 				arrs := spentOutputs[string(tx.TXID)]
-				for _, index := range arrs {
-					if int64(idx) == index {
-						continue OUTPUT
+				if arrs != nil {
+					for _, index := range arrs {
+						//当前准备添加的output已经消费过了，不要再添加了
+						if int64(idx) == index {
+							continue OUTPUT
+						}
 					}
 				}
 
@@ -144,4 +147,14 @@ func (bc *BlockChain) FindUTXOs(address string) []TXOutput {
 	}
 
 	return utxos
+}
+
+//找到满足转账条件，未消费过的，合理的utxo的集合
+func (bc *BlockChain) FindNeedUTXOs(fromAddr string, amount float64) (map[string][]int64, float64) {
+	utxos := make(map[string][]int64) //找到的合理的utxo集合
+	var calc float64                  //扎到的utxo里面包含的钱的总数
+
+	//TODO
+
+	return utxos, calc
 }
