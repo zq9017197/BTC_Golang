@@ -108,19 +108,31 @@ func (bc *BlockChain) FindUTXOs(address string) []TXOutput {
 
 		//2.遍历交易
 		for _, tx := range block.Transactions {
-			//3.遍历output，找到和自己相关的utxo（在添加output之前检查一下是否已经消耗过）
-			for _, output := range tx.TXOutputs {
+		OUTPUT:
+		//3.遍历output，找到和自己相关的utxo（在添加output之前检查一下是否已经消耗过）
+			for idx, output := range tx.TXOutputs {
+				//过滤掉已经消费过的utxo
+				arrs := spentOutputs[string(tx.TXID)]
+				for _, index := range arrs {
+					if int64(idx) == index {
+						continue OUTPUT
+					}
+				}
+
 				if output.ScriptPubKey == address { //找到和自己相关的utxo
 					utxos = append(utxos, output)
 				}
 			}
 
-			//4.遍历input，找到自己花费过的utxo集合（把自己消费国的标识出来）
-			for _, input := range tx.TXInputs {
-				if input.ScriptSig == address {
-					//交易输⼊，可能是多个。多个交易输入可能是同一个TXID，不同的索引
-					idxArr := spentOutputs[string(input.PreTXID)]
-					spentOutputs[string(input.PreTXID)] = append(idxArr, input.VoutIndex)
+			//如果当前交易是挖矿交易的话，那么不做遍历，直接跳过
+			if !tx.IsCoinbase() {
+				//4.遍历input，找到自己花费过的utxo集合（把自己消费国的标识出来）
+				for _, input := range tx.TXInputs {
+					if input.ScriptSig == address {
+						//交易输⼊，可能是多个。多个交易输入可能是同一个TXID，不同的索引
+						idxArr := spentOutputs[string(input.PreTXID)]
+						spentOutputs[string(input.PreTXID)] = append(idxArr, input.VoutIndex)
+					}
 				}
 			}
 		}
@@ -130,9 +142,6 @@ func (bc *BlockChain) FindUTXOs(address string) []TXOutput {
 			break
 		}
 	}
-
-	//5.过滤已经消费过的utxo
-	//TODO
 
 	return utxos
 }

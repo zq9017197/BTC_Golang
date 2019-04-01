@@ -66,6 +66,18 @@ func NewCoinbaseTX(address string, data string) *Transaction {
 	return &tx
 }
 
+//判断是否为挖矿交易
+func (tx *Transaction) IsCoinbase() bool {
+	if len(tx.TXInputs) == 1 {
+		input := tx.TXInputs[0]
+		if input.PreTXID == nil && input.VoutIndex == -1 {
+			return true
+		}
+	}
+
+	return false
+}
+
 //解锁脚本，付款人会使用付款人的解锁脚本解开能够支配的UTXO
 func (input *TXInput) CanUnlockUTXOWith(unlockData string) bool {
 	//解锁脚本是检验input是否可以使用由某个地址锁定的utxo，所以对于解锁脚本来说，是外部提供锁定信息，我去检查一下能否解开它。
