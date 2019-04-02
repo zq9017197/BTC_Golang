@@ -132,9 +132,8 @@ func (bc *BlockChain) FindUTXOs(address string) []TXOutput {
 				//4.遍历input，找到自己花费过的utxo集合（把自己消费国的标识出来）
 				for _, input := range tx.TXInputs {
 					if input.ScriptSig == address {
-						//交易输⼊，可能是多个。多个交易输入可能是同一个TXID，不同的索引
-						idxArr := spentOutputs[string(input.PreTXID)]
-						spentOutputs[string(input.PreTXID)] = append(idxArr, input.VoutIndex)
+						//交易输入，可能是多个。多个交易输入可能是同一个TXID，不同的索引
+						spentOutputs[string(input.PreTXID)] = append(spentOutputs[string(input.PreTXID)], input.VoutIndex)
 					}
 				}
 			}
@@ -154,7 +153,58 @@ func (bc *BlockChain) FindNeedUTXOs(fromAddr string, amount float64) (map[string
 	utxos := make(map[string][]int64) //找到的合理的utxo集合
 	var calc float64                  //扎到的utxo里面包含的钱的总数
 
-	//TODO
+	//保存消费过的output，key是这个output的txid，value是这个交易中索引的数组
+	spentOutputs := make(map[string][]int64)
+
+	//1.遍历区块
+	it := NewBlockChainIterator(bc)
+	for {
+		block := it.GetBlockAndMoveLeft()
+
+		//2.遍历交易
+		for _, tx := range block.Transactions {
+		OUTPUT:
+		//3.遍历output，找到和自己相关的utxo（在添加output之前检查一下是否已经消耗过）
+			for idx, output := range tx.TXOutputs {
+				//5.过滤消费过的utxo
+				arrs := spentOutputs[string(tx.TXID)]
+				if arrs != nil {
+					for _, index := range arrs {
+						//当前准备添加的output已经消费过了，不要再添加了
+						if int64(idx) == index {
+							continue OUTPUT
+						}
+					}
+				}
+
+				if output.ScriptPubKey == fromAddr { //找到和自己相关的utxo
+					if calc < amount {
+						utxos[string(tx.TXID)] = append(utxos[string(tx.TXID)], int64(idx))
+						calc += output.Value
+						if calc >= amount {
+							return utxos, calc
+						}
+					}
+				}
+			}
+
+			//如果当前交易是挖矿交易的话，那么不做遍历，直接跳过
+			if !tx.IsCoinbase() {
+				//4.遍历input，找到自己花费过的utxo集合（把自己消费国的标识出来）
+				for _, input := range tx.TXInputs {
+					if input.ScriptSig == fromAddr {
+						//交易输入，可能是多个。多个交易输入可能是同一个TXID，不同的索引
+						spentOutputs[string(input.PreTXID)] = append(spentOutputs[string(input.PreTXID)], input.VoutIndex)
+					}
+				}
+			}
+		}
+
+		//终止条件
+		if len(block.PreHash) == 0 {
+			break
+		}
+	}
 
 	return utxos, calc
 }

@@ -68,11 +68,8 @@ func NewCoinbaseTX(address string, data string) *Transaction {
 
 //判断是否为挖矿交易
 func (tx *Transaction) IsCoinbase() bool {
-	if len(tx.TXInputs) == 1 {
-		input := tx.TXInputs[0]
-		if input.PreTXID == nil && input.VoutIndex == -1 {
-			return true
-		}
+	if len(tx.TXInputs) == 1 && tx.TXInputs[0].PreTXID == nil && tx.TXInputs[0].VoutIndex == -1 {
+		return true
 	}
 
 	return false
