@@ -109,6 +109,7 @@ func NewTransaction(fromAddr string, toAddr string, amount float64, bc *BlockCha
 	return &tx
 }
 
+/*
 //解锁脚本，付款人会使用付款人的解锁脚本解开能够支配的UTXO
 func (input *TXInput) CanUnlockUTXOWith(unlockData string) bool {
 	//解锁脚本是检验input是否可以使用由某个地址锁定的utxo，所以对于解锁脚本来说，是外部提供锁定信息，我去检查一下能否解开它。
@@ -123,3 +124,4 @@ func (output *TXOutput) CanBeUnlockedWith(unlockData string) bool {
 	//ScriptPubKey是锁定信息，v4版本中使用收款人的地址填充。unlockData是付款人的地址（签名）
 	return output.ScriptPubKey == unlockData
 }
+*/

@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"time"
+	"strconv"
 )
 
 /**
@@ -45,6 +46,18 @@ func (cli *Client) Run() {
 			}
 			cli.getBalance(address)
 		}
+	case "send":
+		if len(list) != 7 {
+			fmt.Println(usageSend)
+			os.Exit(1)
+		}
+
+		fromAddr := list[2]
+		toAddr := list[3]
+		amount, _ := strconv.ParseFloat(list[4], 64)
+		miner := list[5]
+		data := list[6]
+		cli.send(fromAddr, toAddr, amount, miner, data)
 	default:
 		fmt.Println(Usage)
 	}
@@ -92,4 +105,19 @@ func (cli *Client) getBalance(address string) {
 	}
 
 	fmt.Printf("The balance of \"%s\" is : %f BTC\n", address, total)
+}
+
+//转账交易
+func (cli *Client) send(fromAddr, toAddr string, amount float64, miner, data string) {
+	//创建挖矿交易
+	coinbase := NewCoinbaseTX(miner, data)
+
+	//交接普通交易
+	tx := NewTransaction(fromAddr, toAddr, amount, cli.bc)
+
+	//添加区块
+	if tx != nil{
+		cli.bc.AddBlock([]*Transaction{coinbase, tx})
+		fmt.Println("Send Successfully!")
+	}
 }
