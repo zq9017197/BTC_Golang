@@ -26,6 +26,7 @@ func (cli *Client) Run() {
 
 	cmd := list[1]
 	switch cmd {
+	/*
 	case "addBlock":
 		if len(list) == 4 && list[2] == "--data" {
 			data := list[3]
@@ -35,8 +36,11 @@ func (cli *Client) Run() {
 			}
 			cli.addBlock(nil) //TODO
 		}
+	*/
 	case "printChain":
 		cli.printChain()
+	case "newWallet":
+		cli.NewWallet()
 	case "getBalance":
 		if len(list) == 4 && list[2] == "--address" {
 			address := list[3]
@@ -116,8 +120,19 @@ func (cli *Client) send(fromAddr, toAddr string, amount float64, miner, data str
 	tx := NewTransaction(fromAddr, toAddr, amount, cli.bc)
 
 	//添加区块
-	if tx != nil{
+	if tx != nil {
 		cli.bc.AddBlock([]*Transaction{coinbase, tx})
 		fmt.Println("Send Successfully!")
+	}
+}
+
+//创建一个新的钱包
+func (cli *Client) NewWallet() {
+	//wallet := NewWallet()
+	//address := wallet.NewAddress()
+
+	wallets := NewWallets()
+	for address := range wallets.WalletsMap {
+		fmt.Printf("地址：%s\n", address)
 	}
 }
