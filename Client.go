@@ -38,24 +38,35 @@ func (cli *Client) Run() {
 		}
 	*/
 	case "printChain":
+		fmt.Printf("反向打印区块...\n")
 		cli.printChain()
 	case "newWallet":
+		fmt.Printf("创建新的钱包...\n")
 		cli.NewWallet()
+	case "listAddresses":
+		fmt.Printf("列举所有地址...\n")
+		cli.ListAddresses()
 	case "getBalance":
 		if len(list) == 4 && list[2] == "--address" {
+			fmt.Printf("获取余额...\n")
 			address := list[3]
 			if address == "" {
 				fmt.Println("address should not be empty!")
 				os.Exit(1)
 			}
 			cli.getBalance(address)
+		}else{
+			fmt.Printf("获取余额命令格式：\n")
+			fmt.Println(usagegetBalance)
 		}
 	case "send":
 		if len(list) != 7 {
+			fmt.Printf("转账命令格式：\n")
 			fmt.Println(usageSend)
 			os.Exit(1)
 		}
 
+		fmt.Printf("转账开始...\n")
 		fromAddr := list[2]
 		toAddr := list[3]
 		amount, _ := strconv.ParseFloat(list[4], 64)
@@ -63,6 +74,7 @@ func (cli *Client) Run() {
 		data := list[6]
 		cli.send(fromAddr, toAddr, amount, miner, data)
 	default:
+		fmt.Printf("无效的命令，请检查!\n")
 		fmt.Println(Usage)
 	}
 
@@ -128,11 +140,16 @@ func (cli *Client) send(fromAddr, toAddr string, amount float64, miner, data str
 
 //创建一个新的钱包
 func (cli *Client) NewWallet() {
-	//wallet := NewWallet()
-	//address := wallet.NewAddress()
-
 	wallets := NewWallets()
-	for address := range wallets.WalletsMap {
+	address := wallets.CreateWallet()
+	fmt.Printf("地址：%s\n", address)
+}
+
+//遍历钱包
+func (cli *Client) ListAddresses() {
+	wallets := NewWallets()
+	addresses := wallets.ListAddresses()
+	for _, address := range addresses {
 		fmt.Printf("地址：%s\n", address)
 	}
 }
