@@ -19,14 +19,14 @@ const lastHashKey = "lastHashKey" //最后一个区块哈希的Key
 	转账：send ing baibai 10 ing 挖矿收益
 
 	测试案例：
-	send ing 1BFNQ79MCgEQXxVNj3xqjm1fo2ipuDrtfv 7 ing 挖矿收益
-	send ing 112rFUMPby5r15yZkYxWeZWMS5MLbd2p8o 8 ing 挖矿收益
-	send ing 12DA7Kv7jNdLz9zJF5UwNYgV3XQNeBgdrS 9 ing 挖矿收益
-
-	getBalance --address ing
 	getBalance --address 1BFNQ79MCgEQXxVNj3xqjm1fo2ipuDrtfv
 	getBalance --address 112rFUMPby5r15yZkYxWeZWMS5MLbd2p8o
 	getBalance --address 12DA7Kv7jNdLz9zJF5UwNYgV3XQNeBgdrS
+	getBalance --address 1919HLw9gDqdpB1hZtCKu6HBKVQESgvafq
+
+	send 1BFNQ79MCgEQXxVNj3xqjm1fo2ipuDrtfv 112rFUMPby5r15yZkYxWeZWMS5MLbd2p8o 7 1BFNQ79MCgEQXxVNj3xqjm1fo2ipuDrtfv 挖矿收益
+	send 1BFNQ79MCgEQXxVNj3xqjm1fo2ipuDrtfv 12DA7Kv7jNdLz9zJF5UwNYgV3XQNeBgdrS 8 1BFNQ79MCgEQXxVNj3xqjm1fo2ipuDrtfv 挖矿收益
+	send 1BFNQ79MCgEQXxVNj3xqjm1fo2ipuDrtfv 1919HLw9gDqdpB1hZtCKu6HBKVQESgvafq 9 1BFNQ79MCgEQXxVNj3xqjm1fo2ipuDrtfv 挖矿收益
  */
 const Usage = `
 	printChain "反向打印区块链"

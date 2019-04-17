@@ -1,7 +1,7 @@
 package main
 
 func main() {
-	bc := NewBlockChain("ing")
+	bc := NewBlockChain("1BFNQ79MCgEQXxVNj3xqjm1fo2ipuDrtfv")
 	//bc.AddBlock("Hello BTC")
 	//bc.AddBlock("Hello ETH")
 	//bc.AddBlock("Hello LTC")

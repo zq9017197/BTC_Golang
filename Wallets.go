@@ -7,6 +7,7 @@ import (
 	"log"
 	"io/ioutil"
 	"os"
+	"github.com/base58"
 )
 
 /**
@@ -92,4 +93,16 @@ func (wallets *Wallets) ListAddresses() []string {
 	}
 
 	return addresses
+}
+
+//通过地址返回公钥的哈希值
+func GetPubKeyFromAddress(address string) []byte {
+	//1. 解码
+	addressByte := base58.Decode(address) //25字节
+	len := len(addressByte)
+
+	//2. 截取出公钥哈希：去除version（1字节），去除校验码（4字节）
+	pubKeyHash := addressByte[1:len-4]
+
+	return pubKeyHash
 }

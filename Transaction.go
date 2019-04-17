@@ -23,14 +23,43 @@ type Transaction struct {
 type TXInput struct {
 	PreTXID   []byte //引用utxo所在交易的ID
 	VoutIndex int64  //所消费utxo在output中的索引
-	ScriptSig string //解锁脚本（签名，公钥）
+
+	//解锁脚本，我们用地址来模拟（签名，公钥）
+	//ScriptSig string
+
+	//真正的数字签名，由r，s拼成的[]byte
+	Signature []byte
+
+	//约定，这里的PubKey不存储原始的公钥，而是存储X和Y拼接的字符串，在校验端重新拆分（参考r,s传递）
+	PubKey []byte //注意，是公钥，不是哈希，也不是地址
 }
 
 //交易输出结构
 type TXOutput struct {
 	Value float64 //接收金额
+
 	//对方公钥的哈希，这个哈希可以通过地址反推出来，所以转账时知道地址即可！
-	ScriptPubKey string //锁定脚本
+	//ScriptPubKey string //锁定脚本,我们用地址模拟
+
+	//收款方的公钥的哈希，注意，是哈希而不是公钥，也不是地址
+	PubKeyHash []byte
+}
+
+//由于现在存储的字段是地址的公钥哈希，所以无法直接创建TXOutput，
+//为了能够得到公钥哈希，我们需要处理一下，写一个Lock函数
+func (output *TXOutput) Lock(address string) {
+	//真正的锁定动作！！！！！
+	output.PubKeyHash = GetPubKeyFromAddress(address)
+}
+
+//给TXOutput提供一个创建的方法，否则无法调用Lock
+func NewTXOutput(value float64, address string) *TXOutput {
+	output := TXOutput{
+		Value: value,
+	}
+
+	output.Lock(address)
+	return &output
 }
 
 //设置TXID
@@ -57,10 +86,11 @@ func NewCoinbaseTX(address string, data string) *Transaction {
 	}
 
 	//比特币系统，对于这个input的id填0，对索引填0xffff，data由矿⼯填写，一般填所在矿池的名字
-	input := TXInput{nil, -1, data}
-	output := TXOutput{reward, address}
+	input := TXInput{nil, -1, nil, []byte(data)}
+	//output := TXOutput{reward, address}
+	output := NewTXOutput(reward, address)
 
-	tx := Transaction{nil, []TXInput{input}, []TXOutput{output}}
+	tx := Transaction{nil, []TXInput{input}, []TXOutput{*output}}
 	tx.SetHash()
 
 	return &tx
@@ -77,8 +107,25 @@ func (tx *Transaction) IsCoinbase() bool {
 
 //创建普通交易
 func NewTransaction(fromAddr string, toAddr string, amount float64, bc *BlockChain) *Transaction {
+	//1. 创建交易之后要进行数字签名->所以需要私钥->打开钱包"NewWallets()"
+	wallets := NewWallets()
+
+	//2. 找到自己的钱包，根据地址返回自己的wallet
+	wallet := wallets.WalletsMap[fromAddr]
+	if wallet == nil {
+		fmt.Printf("没有找到该地址的钱包，交易创建失败!\n")
+		return nil
+	}
+
+	//3. 得到对应的公钥，私钥
+	pubKey := wallet.PubKey
+	//privateKey := wallet.Private
+
+	//传递公钥的哈希，而不是传递地址
+	pubKeyHash := HashPubKey(pubKey)
+
 	//1.找到最合理的utxo集合 map[string][]int64
-	utxos, calc := bc.FindNeedUTXOs(fromAddr, amount)
+	utxos, calc := bc.FindNeedUTXOs(pubKeyHash, amount)
 	if calc < amount {
 		fmt.Println("余额不足，交易失败！")
 		return nil
@@ -90,18 +137,20 @@ func NewTransaction(fromAddr string, toAddr string, amount float64, bc *BlockCha
 	//2.将这些utxo逐一转成inputs
 	for txid, idxArr := range utxos {
 		for _, idx := range idxArr {
-			input := TXInput{[]byte(txid), int64(idx), fromAddr}
+			input := TXInput{[]byte(txid), int64(idx), nil, pubKey}
 			inputs = append(inputs, input)
 		}
 	}
 
 	//3.创建outputs
-	output := TXOutput{amount, toAddr}
-	outputs = append(outputs, output)
+	//output := TXOutput{amount, toAddr}
+	output := NewTXOutput(amount, toAddr)
+	outputs = append(outputs, *output)
 
 	//4.判断是否需要找零
 	if calc > amount {
-		outputs = append(outputs, TXOutput{calc - amount, fromAddr})
+		output = NewTXOutput(calc-amount, fromAddr)
+		outputs = append(outputs, *output)
 	}
 
 	tx := Transaction{nil, inputs, outputs}

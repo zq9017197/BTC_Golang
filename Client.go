@@ -55,7 +55,7 @@ func (cli *Client) Run() {
 				os.Exit(1)
 			}
 			cli.getBalance(address)
-		}else{
+		} else {
 			fmt.Printf("获取余额命令格式：\n")
 			fmt.Println(usagegetBalance)
 		}
@@ -99,7 +99,7 @@ func (cli *Client) printChain() {
 		fmt.Printf("TimeStamp : %s\n", timeFormat)
 		fmt.Printf("Difficuty : %d\n", block.Difficulty)
 		fmt.Printf("Nonce : %d\n", block.Nonce)
-		fmt.Printf("Data : %s\n", block.Transactions[0].TXInputs[0].ScriptSig)
+		fmt.Printf("Data : %s\n", block.Transactions[0].TXInputs[0].PubKey)
 
 		pow := NewProofOfWork(block)
 		fmt.Printf("IsValid : %v\n", pow.IsValid())
@@ -113,7 +113,15 @@ func (cli *Client) printChain() {
 
 //获取余额
 func (cli *Client) getBalance(address string) {
-	utxos := cli.bc.FindUTXOs(address)
+	//1. 校验地址
+	if !IsValidAddress(address) {
+		fmt.Printf("地址无效 : %s\n", address)
+		return
+	}
+
+	//2. 生成公钥哈希
+	pubKeyHash := GetPubKeyFromAddress(address)
+	utxos := cli.bc.FindUTXOs(pubKeyHash)
 
 	var total float64
 	for _, utxo := range utxos {
@@ -125,6 +133,20 @@ func (cli *Client) getBalance(address string) {
 
 //转账交易
 func (cli *Client) send(fromAddr, toAddr string, amount float64, miner, data string) {
+	//校验地址
+	if !IsValidAddress(fromAddr) {
+		fmt.Printf("地址无效 fromAddr: %s\n", fromAddr)
+		return
+	}
+	if !IsValidAddress(toAddr) {
+		fmt.Printf("地址无效 toAddr: %s\n", toAddr)
+		return
+	}
+	if !IsValidAddress(miner) {
+		fmt.Printf("地址无效 miner: %s\n", miner)
+		return
+	}
+
 	//创建挖矿交易
 	coinbase := NewCoinbaseTX(miner, data)
 
