@@ -6,6 +6,11 @@ import (
 	"log"
 	"crypto/sha256"
 	"fmt"
+	"crypto/ecdsa"
+	"crypto/rand"
+	"math/big"
+	"crypto/elliptic"
+	"strings"
 )
 
 /**
@@ -119,7 +124,7 @@ func NewTransaction(fromAddr string, toAddr string, amount float64, bc *BlockCha
 
 	//3. 得到对应的公钥，私钥
 	pubKey := wallet.PubKey
-	//privateKey := wallet.Private
+	privateKey := wallet.Private
 
 	//传递公钥的哈希，而不是传递地址
 	pubKeyHash := HashPubKey(pubKey)
@@ -155,22 +160,145 @@ func NewTransaction(fromAddr string, toAddr string, amount float64, bc *BlockCha
 
 	tx := Transaction{nil, inputs, outputs}
 	tx.SetHash()
+
+	bc.SignTransaction(&tx, privateKey) //签名
+
 	return &tx
 }
 
 /*
-//解锁脚本，付款人会使用付款人的解锁脚本解开能够支配的UTXO
-func (input *TXInput) CanUnlockUTXOWith(unlockData string) bool {
-	//解锁脚本是检验input是否可以使用由某个地址锁定的utxo，所以对于解锁脚本来说，是外部提供锁定信息，我去检查一下能否解开它。
-	//我们没有涉及到真实的非对称加密，所以使用字符串来代替加密和签名数据。即使用地址进行加密，同时使用地址当做签名，通过对比字符串来确定utxo能否解开。
-	//ScriptSig是签名，v4版本中使用付款人的地址填充。unlockData是收款人的地址
-	return input.ScriptSig == unlockData
+	签名的具体实现
+	参数为：私钥，inputs里面所有引用的交易的结构map[string]Transaction
+	map[2222]Transaction222
+	map[3333]Transaction333
+ */
+func (tx *Transaction) Sign(privateKey *ecdsa.PrivateKey, prevTXs map[string]Transaction) {
+	if tx.IsCoinbase() {
+		return
+	}
+
+	//1. 创建一个当前交易的副本：txCopy，使用函数： TrimmedCopy：要把Signature和PubKey字段设置为nil
+	txCopy := tx.TrimmedCopy()
+	//2. 循环遍历txCopy的inputs，得到这个input索引的output的公钥哈希
+	for i, input := range txCopy.TXInputs {
+		prevTX := prevTXs[string(input.PreTXID)]
+		if len(prevTX.TXID) == 0 {
+			log.Panic("引用的交易无效")
+		}
+
+		//不要对input进行赋值，这是一个副本，要对txCopy.TXInputs[xx]进行操作，否则无法把pubKeyHash传进来
+		txCopy.TXInputs[i].PubKey = prevTX.TXOutputs[input.VoutIndex].PubKeyHash
+
+		//所需要的三个数据都具备了，开始做哈希处理
+		//3. 生成要签名的数据。要签名的数据一定是哈希值
+		//a. 我们对每一个input都要签名一次，签名的数据是由当前input引用的output的哈希+当前的outputs（都承载在当前这个txCopy里面）
+		//b. 要对这个拼好的txCopy进行哈希处理，SetHash得到TXID，这个TXID就是我们要签名最终数据。
+		txCopy.SetHash()
+
+		//还原，以免影响后面input的签名
+		txCopy.TXInputs[i].PubKey = nil
+		//signDataHash认为是原始数据
+		signDataHash := txCopy.TXID
+		//4. 执行签名动作得到r,s字节流
+		r, s, err := ecdsa.Sign(rand.Reader, privateKey, signDataHash)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		//5. 放到我们所签名的input的Signature中
+		signature := append(r.Bytes(), s.Bytes()...)
+		tx.TXInputs[i].Signature = signature
+	}
 }
 
-//锁定脚本，使用收款人的地址对付款金额进行锁定
-func (output *TXOutput) CanBeUnlockedWith(unlockData string) bool {
-	//锁定脚本是用于指定比特币的新主人。在创建output时，应该是一直在等待一个签名的到来，检查这个签名能否解开自己锁定的比特币。
-	//ScriptPubKey是锁定信息，v4版本中使用收款人的地址填充。unlockData是付款人的地址（签名）
-	return output.ScriptPubKey == unlockData
+//复制 Transaction
+func (tx *Transaction) TrimmedCopy() Transaction {
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	for _, input := range tx.TXInputs {
+		inputs = append(inputs, TXInput{input.PreTXID, input.VoutIndex, nil, nil})
+	}
+
+	for _, output := range tx.TXOutputs {
+		outputs = append(outputs, output)
+	}
+
+	return Transaction{tx.TXID, inputs, outputs}
 }
-*/
+
+/**
+	校验签名：
+	所需要的数据：公钥，数据(txCopy，生成哈希), 签名
+	我们要对每一个签名过得input进行校验
+ */
+func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
+	if tx.IsCoinbase() {
+		return true
+	}
+
+	//1. 得到签名的数据
+	txCopy := tx.TrimmedCopy()
+	for i, input := range tx.TXInputs {
+		prevTX := prevTXs[string(input.PreTXID)]
+		if len(prevTX.TXID) == 0 {
+			log.Panic("引用的交易无效")
+		}
+
+		txCopy.TXInputs[i].PubKey = prevTX.TXOutputs[input.VoutIndex].PubKeyHash
+		txCopy.SetHash()
+		dataHash := txCopy.TXID
+		//2. 得到Signature, 反推会r,s
+		signature := input.Signature //拆，r,s
+		//3. 拆解PubKey, X, Y 得到原生公钥
+		pubKey := input.PubKey //拆，X, Y
+
+		//1. 定义两个辅助的big.int
+		r := big.Int{}
+		s := big.Int{}
+		//2. 拆分我们signature，平均分，前半部分给r, 后半部分给s
+		r.SetBytes(signature[:len(signature)/2 ])
+		s.SetBytes(signature[len(signature)/2:])
+
+		//a. 定义两个辅助的big.int
+		X := big.Int{}
+		Y := big.Int{}
+		//b. pubKey，平均分，前半部分给X, 后半部分给Y
+		X.SetBytes(pubKey[:len(pubKey)/2 ])
+		Y.SetBytes(pubKey[len(pubKey)/2:])
+
+		//PubKey不存储原始的公钥，而是存储X和Y拼接的字符串，在校验端重新拆分（参考r,s传递）
+		//还原原始的公钥
+		pubKeyOrigin := ecdsa.PublicKey{elliptic.P256(), &X, &Y}
+
+		//4. Verify
+		if !ecdsa.Verify(&pubKeyOrigin, dataHash, &r, &s) {
+			return false
+		}
+	}
+
+	return true
+}
+
+//打印区块链
+func (tx Transaction) String() string {
+	var lines []string
+
+	lines = append(lines, fmt.Sprintf("--- Transaction %x:", tx.TXID))
+
+	for i, input := range tx.TXInputs {
+		lines = append(lines, fmt.Sprintf("     Input %d:", i))
+		lines = append(lines, fmt.Sprintf("       PreTXID:      %x", input.PreTXID))
+		lines = append(lines, fmt.Sprintf("       Out:       %d", input.VoutIndex))
+		lines = append(lines, fmt.Sprintf("       Signature: %x", input.Signature))
+		lines = append(lines, fmt.Sprintf("       PubKey:    %x", input.PubKey))
+	}
+
+	for i, output := range tx.TXOutputs {
+		lines = append(lines, fmt.Sprintf("     Output %d:", i))
+		lines = append(lines, fmt.Sprintf("       Value:  %f", output.Value))
+		lines = append(lines, fmt.Sprintf("       Script: %x", output.PubKeyHash))
+	}
+
+	return strings.Join(lines, "\n")
+}

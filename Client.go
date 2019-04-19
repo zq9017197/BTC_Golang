@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"fmt"
-	"time"
 	"strconv"
 )
 
@@ -38,7 +37,7 @@ func (cli *Client) Run() {
 		}
 	*/
 	case "printChain":
-		fmt.Printf("反向打印区块...\n")
+		fmt.Printf("\n反向打印区块：\n\n")
 		cli.printChain()
 	case "newWallet":
 		fmt.Printf("创建新的钱包...\n")
@@ -90,6 +89,12 @@ func (cli *Client) printChain() {
 	it := NewBlockChainIterator(cli.bc)
 	for {
 		block := it.GetBlockAndMoveLeft()
+
+		for _, tx := range block.Transactions {
+			fmt.Println(tx, "\n") //调用Transaction 的String()方法
+		}
+
+		/*
 		fmt.Printf("===========================\n")
 		fmt.Printf("Version : %d\n", block.Version)
 		fmt.Printf("PrevBlockHash : %x\n", block.PreHash)
@@ -103,6 +108,7 @@ func (cli *Client) printChain() {
 
 		pow := NewProofOfWork(block)
 		fmt.Printf("IsValid : %v\n", pow.IsValid())
+		*/
 
 		//终止条件
 		if len(block.PreHash) == 0 {

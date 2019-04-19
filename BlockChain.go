@@ -4,6 +4,9 @@ import (
 	"github.com/boltdb/bolt"
 	"log"
 	"bytes"
+	"fmt"
+	"errors"
+	"crypto/ecdsa"
 )
 
 /**
@@ -79,6 +82,14 @@ func (bc *BlockChain) AddBlock(txs []*Transaction) {
 	block := NewBlock(data, lastBlock.Hash)  //创建新区块
 	bc.blocks = append(bc.blocks, block)     //添加新区块
 	*/
+
+	//校验签名
+	for _, tx := range txs {
+		if !bc.VerifyTransaction(tx) {
+			fmt.Printf("矿工发现无效交易!")
+			return
+		}
+	}
 
 	block := NewBlock(txs, bc.tail) //创建新区块
 	bc.db.Update(func(tx *bolt.Tx) error {
@@ -189,4 +200,89 @@ func (bc *BlockChain) FindUTXOTransactions(fromPubKeyHash []byte) []*Transaction
 	}
 
 	return txs
+}
+
+//根据id查找交易本身，需要遍历整个区块链
+func (bc *BlockChain) FindTransactionByTXid(id []byte) (Transaction, error) {
+	it := NewBlockChainIterator(bc)
+	//1. 遍历区块链
+	for {
+		block := it.GetBlockAndMoveLeft()
+		//2. 遍历交易
+		for _, tx := range block.Transactions {
+			//3. 比较交易，找到了直接退出
+			if bytes.Equal(tx.TXID, id) {
+				return *tx, nil
+			}
+		}
+
+		if len(block.PreHash) == 0 {
+			fmt.Printf("区块链遍历结束!\n")
+			break
+		}
+	}
+
+	//4. 如果没找到，返回空Transaction，同时返回错误状态
+	return Transaction{}, errors.New("无效的交易id，请检查!")
+}
+
+//交易签名
+func (bc *BlockChain) SignTransaction(tx *Transaction, privateKey *ecdsa.PrivateKey) {
+	//签名，交易创建的最后进行签名
+	prevTXs := make(map[string]Transaction)
+
+	//找到所有引用的交易
+	//1. 根据inputs来找，有多少input, 就遍历多少次
+	//2. 找到目标交易，（根据TXid来找）
+	//3. 添加到prevTXs里面
+	for _, input := range tx.TXInputs {
+		//根据id查找交易本身，需要遍历整个区块链
+		tx, err := bc.FindTransactionByTXid(input.PreTXID)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		/*
+		第一个input查找之后：prevTXs：
+			map[2222]Transaction222
+
+		第二个input查找之后：prevTXs：
+			map[2222]Transaction222
+			map[3333]Transaction333
+
+		第三个input查找之后：prevTXs：
+			map[2222]Transaction222
+			map[3333]Transaction333(只不过是重新写了一次)
+		*/
+		prevTXs[string(input.PreTXID)] = tx
+
+	}
+
+	tx.Sign(privateKey, prevTXs)
+}
+
+//验证签名
+func (bc *BlockChain) VerifyTransaction(tx *Transaction) bool {
+	if tx.IsCoinbase() {
+		return true
+	}
+
+	//签名，交易创建的最后进行签名
+	prevTXs := make(map[string]Transaction)
+
+	//找到所有引用的交易
+	//1. 根据inputs来找，有多少input, 就遍历多少次
+	//2. 找到目标交易，（根据TXid来找）
+	//3. 添加到prevTXs里面
+	for _, input := range tx.TXInputs {
+		//根据id查找交易本身，需要遍历整个区块链
+		tx, err := bc.FindTransactionByTXid(input.PreTXID)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		prevTXs[string(input.PreTXID)] = tx
+	}
+
+	return tx.Verify(prevTXs)
 }
